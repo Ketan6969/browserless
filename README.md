@@ -57,7 +57,7 @@ func main() {
 }
 ```
 
-Check out the `examples/` directory for more advanced patterns, including concurrent scraping!
+Check out the `examples/` directory and our **[Real-World Cookbook](./docs/examples.md)** for more advanced patterns, including concurrent scraping!
 
 ## Architecture
 

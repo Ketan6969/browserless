@@ -12,6 +12,9 @@ Because the engine natively parses the DOM and fully executes the website's Java
 
 ## 1. Writing Your Extraction Script
 
+> [!TIP]
+> Looking for quick, real-world examples? Check out the **[Capy Cookbook: Real-World Examples](./examples.md)** for snippets extracting data from Hacker News, Wikipedia, GitHub, and more!
+
 Your script should be written in standard JavaScript. The engine will execute it *after* the website's HTML has been loaded and its JavaScript bundles have hydrated the DOM.
 
 Create a file named `extract.js`:
@@ -112,4 +115,56 @@ For quick extractions without creating a `.js` file, you can pass the JS directl
 
 ```bash
 ./capy -html https://example.com -eval "document.querySelector('h1').innerText" -stats
+```
+
+---
+
+## 5. Using the Go SDK
+
+If you're building a scraping service in Go, you can bypass the CLI and embed the engine directly for high-performance, concurrent extraction.
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    
+    "github.com/Ketan6969/capy"
+)
+
+func main() {
+    // 1. Initialize the VM
+    bl := capy.New(context.Background())
+    defer bl.Close()
+
+    // 2. Load the target webpage
+    err := bl.LoadURL("https://news.ycombinator.com")
+    if err != nil {
+        log.Fatalf("Failed to load URL: %v", err)
+    }
+
+    // 3. Evaluate the extraction JS and log the result
+    err = bl.Evaluate(`
+        const articles = document.querySelectorAll('.athing');
+        const results = [];
+        
+        for (let i = 0; i < Math.min(articles.length, 5); i++) {
+            const el = articles[i];
+            const titleNode = el.querySelector('.titleline > a');
+            
+            results.push({
+                title: titleNode ? titleNode.innerText : "No Title",
+                id: el.getAttribute('id')
+            });
+        }
+        
+        console.log("Extracted data:", JSON.stringify(results, null, 2));
+    `)
+    
+    if err != nil {
+        log.Fatalf("Evaluation error: %v", err)
+    }
+}
 ```

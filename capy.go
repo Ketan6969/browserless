@@ -14,6 +14,7 @@ import (
 // Capy represents a single execution environment.
 type Capy struct {
 	ctx *engine.Context
+	doc *dom.Node
 }
 
 // New creates a new capy environment tied to the provided context.
@@ -36,6 +37,7 @@ func (b *Capy) LoadHTML(htmlStr string) error {
 	if err != nil {
 		return err
 	}
+	b.doc = documentRoot
 	dom.SetupDOM(b.ctx.VM(), documentRoot, "http://localhost")
 	dom.DispatchLifecycleEvents(b.ctx.VM())
 	return nil
@@ -71,6 +73,7 @@ func (b *Capy) LoadURL(urlStr string) error {
 		return err
 	}
 
+	b.doc = documentRoot
 	dom.SetupDOM(b.ctx.VM(), documentRoot, urlStr)
 	
 	// Expose a basic fetch loop for script tags
@@ -102,6 +105,11 @@ func (b *Capy) Evaluate(script string) error {
 // Close terminates the environment and releases resources.
 func (b *Capy) Close() {
 	b.ctx.Close()
+}
+
+// Document returns the parsed HTML document root, allowing for native Go DOM querying.
+func (b *Capy) Document() *dom.Node {
+	return b.doc
 }
 
 func (b *Capy) resolveURL(base, ref string) string {
