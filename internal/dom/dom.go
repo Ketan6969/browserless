@@ -168,11 +168,16 @@ func (n *Node) getInnerTextRecursive(sb *strings.Builder) {
 		return
 	}
 
-	if styleStr, ok := n.Attributes["style"]; ok {
-		s := strings.ToLower(styleStr)
-		if strings.Contains(s, "display: none") || strings.Contains(s, "display:none") ||
-			strings.Contains(s, "visibility: hidden") || strings.Contains(s, "visibility:hidden") {
-			return
+	if n.Style != nil {
+		if disp, ok := n.Style["display"]; ok {
+			if ds, ok := disp.(string); ok && strings.TrimSpace(strings.ToLower(ds)) == "none" {
+				return
+			}
+		}
+		if vis, ok := n.Style["visibility"]; ok {
+			if vs, ok := vis.(string); ok && strings.TrimSpace(strings.ToLower(vs)) == "hidden" {
+				return
+			}
 		}
 	}
 
@@ -227,6 +232,29 @@ func (n *Node) SetAttribute(name, value string) {
 		n.Id = value
 	} else if name == "class" {
 		n.ClassName = value
+	} else if name == "style" {
+		n.Attributes[name] = value
+		if n.Style == nil {
+			n.Style = make(map[string]interface{})
+		}
+		// Parse inline styles: "display: none; color: red;"
+		rules := strings.Split(value, ";")
+		for _, rule := range rules {
+			parts := strings.SplitN(rule, ":", 2)
+			if len(parts) == 2 {
+				k := strings.TrimSpace(parts[0])
+				v := strings.TrimSpace(parts[1])
+				// Convert kebab-case to camelCase
+				words := strings.Split(k, "-")
+				camelKey := words[0]
+				for i := 1; i < len(words); i++ {
+					if len(words[i]) > 0 {
+						camelKey += strings.ToUpper(words[i][:1]) + strings.ToLower(words[i][1:])
+					}
+				}
+				n.Style[camelKey] = v
+			}
+		}
 	} else {
 		n.Attributes[name] = value
 	}
@@ -241,6 +269,44 @@ func (n *Node) getDocumentURL() string {
 		curr = curr.ParentNode
 	}
 	return ""
+}
+
+func (n *Node) GetBoundingClientRect() map[string]float64 {
+	// A naive bounding client rect polyfill.
+	// We check if the element or any of its ancestors are display: none.
+	curr := n
+	for curr != nil {
+		if curr.Style != nil {
+			if disp, ok := curr.Style["display"]; ok {
+				if ds, ok := disp.(string); ok && strings.TrimSpace(strings.ToLower(ds)) == "none" {
+					return map[string]float64{"x": 0, "y": 0, "width": 0, "height": 0, "top": 0, "right": 0, "bottom": 0, "left": 0}
+				}
+			}
+		}
+		curr = curr.ParentNode
+	}
+
+	// Basic sizing based on element type
+	width := 0.0
+	height := 0.0
+	if isBlockElement(n.NodeName) {
+		width = 1920.0 // Full window width mock
+		height = 20.0  // Default mock height
+	} else if n.NodeType == ElementNode {
+		width = 100.0
+		height = 20.0
+	}
+
+	return map[string]float64{
+		"x":      0,
+		"y":      0,
+		"width":  width,
+		"height": height,
+		"top":    0,
+		"right":  width,
+		"bottom": height,
+		"left":   0,
+	}
 }
 
 func (n *Node) GetAttribute(name string) string {

@@ -596,9 +596,16 @@
 			globalThis.ServiceWorker = function() {};
 			
 			globalThis.crypto = {
-				getRandomValues: function(arr) { return arr; },
+				getRandomValues: function(arr) { 
+					if (arr && arr.length) {
+						for(let i=0; i<arr.length; i++) {
+							arr[i] = Math.floor(Math.random() * 256);
+						}
+					}
+					return arr; 
+				},
 				subtle: {
-					digest: function() { return Promise.resolve(new ArrayBuffer()); },
+					digest: function() { return Promise.resolve(new ArrayBuffer(32)); },
 					encrypt: function() { return Promise.resolve(new ArrayBuffer()); },
 					decrypt: function() { return Promise.resolve(new ArrayBuffer()); },
 					sign: function() { return Promise.resolve(new ArrayBuffer()); },
@@ -768,4 +775,25 @@
 					});
 				}
 			}
+
+			globalThis.indexedDB = {
+				open: function() {
+					var req = {
+						onsuccess: null,
+						onerror: null,
+						onupgradeneeded: null,
+						readyState: "done",
+						result: {
+							createObjectStore: function() {},
+							transaction: function() { return { objectStore: function() { return { get: function() { return {onsuccess:null}; }, put: function() { return {onsuccess:null}; } }; } }; },
+							close: function() {}
+						}
+					};
+					setTimeout(function() { if(req.onsuccess) req.onsuccess({target: req}); }, 0);
+					return req;
+				},
+				deleteDatabase: function() { return { onsuccess: null, onerror: null }; },
+				databases: function() { return Promise.resolve([]); }
+			};
+
 		})();
